@@ -5,6 +5,7 @@ const ForbiddenError = require('../errors/ForbiddenError');
 const NotFound = require('../errors/NotFoundError');
 
 const createMovie = (req, res, next) => {
+  const owner = req.user._id;
   const {
     country,
     director,
@@ -18,7 +19,6 @@ const createMovie = (req, res, next) => {
     thumbnail,
     movieId,
   } = req.body;
-  const owner = req.user._id;
   movieModel
     .create({
       owner,
