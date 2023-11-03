@@ -1,26 +1,22 @@
 require('dotenv').config();
 const cors = require('cors');
-const rateLimit = require('express-rate-limit');
 const express = require('express');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const { errors } = require('celebrate');
-
 const handelError = require('./middlewares/handelError');
 const router = require('./routes/index');
+
+const rateLimit = require('./middlewares/rateLimit');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
+const { messageAppStart, messageConnectDB, messageServerWillFall } = require('./utils/constants');
 
 const { PORT = 3000, DB_ADDRESS = 'mongodb://127.0.0.1:27017/bitfilmsdb' } = process.env;
 const app = express();
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-});
-
-app.use(limiter);
 app.use(helmet());
+app.use(rateLimit);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -28,7 +24,7 @@ app.use(cors());
 
 app.get('/crash-test', () => {
   setTimeout(() => {
-    throw new Error('Сервер сейчас упадёт');
+    throw new Error(messageServerWillFall);
   }, 0);
 });
 
@@ -46,9 +42,9 @@ mongoose.connect(DB_ADDRESS, {
   useNewUrlParser: true,
 })
   .then(() => {
-    console.log('Connected to DB');
+    console.log(messageConnectDB);
   });
 
 app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}`);
+  console.log(`${messageAppStart} ${PORT}`);
 });

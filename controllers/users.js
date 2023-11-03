@@ -7,11 +7,17 @@ const BadRequest = require('../errors/BadRequest');
 const ConflictError = require('../errors/ConflictError');
 const NotFound = require('../errors/NotFoundError');
 
+const {
+  messageIncorrectDataUser,
+  messageUserNotFound,
+  messageAlreadyEmail,
+} = require('../utils/constants');
+
 const getUserById = (req, res, next) => {
   const userId = req.user._id;
   userModel.findById(userId)
     .orFail(() => {
-      throw new NotFound('Пользователь с указанным id не найден');
+      throw new NotFound(messageUserNotFound);
     })
     .then((user) => res.send(user))
     .catch(next);
@@ -26,18 +32,21 @@ const updateProfile = (req, res, next) => {
       { new: true, runValidators: true },
     )
     .orFail()
-    .then((user) => res.status(200).send(user))
+    .then((user) => {
+      res.status(200).send(user);
+    })
     .catch((e) => {
-      if (e instanceof mongoose.Error.DocumentNotFoundError) {
-        return next(new NotFound('Пользователь по указанному id не найден'));
-      }
-      if (e instanceof mongoose.Error.CastError) {
-        return next(new BadRequest('Переданы некорректные данные'));
-      }
+      next(new BadRequest(messageIncorrectDataUser));
       if (e instanceof mongoose.Error.ValidationError) {
-        return next(new BadRequest('Переданы некорректные данные'));
+        return;
+      } if (e.code === 11000) {
+        next(new ConflictError(messageAlreadyEmail));
+        return;
+      } if (e instanceof mongoose.Error.DocumentNotFoundError) {
+        next(new NotFound(messageUserNotFound));
+        return;
       }
-      return next(e);
+      next(e);
     });
 };
 
@@ -54,10 +63,10 @@ const createUser = (req, res, next) => {
     }))
     .catch((e) => {
       if (e instanceof mongoose.Error.ValidationError) {
-        return next(new BadRequest('Переданы некорректные данные'));
+        return next(new BadRequest(messageIncorrectDataUser));
       }
       if (e.code === 11000) {
-        return next(new ConflictError('Пользователь с таким email уже существует'));
+        return next(new ConflictError(messageAlreadyEmail));
       }
       return next(e);
     });
